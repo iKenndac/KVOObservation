@@ -1,30 +1,101 @@
-//
-//  KVOObservation.swift
-//  CBLObservation
-//
-//  Created by Daniel Kennett on 29/09/15.
-//  Copyright © 2015 Cascable AB. All rights reserved.
-//
-
 import Foundation
 
+//# MARK: KVOObservation
+
+/**
+A base interface for KVO observations. If you don't need to mutate or query the state of observations 
+after creating them, this is all you need.
+*/
 public protocol KVOObservation {
+
+    /**
+    Invalidates the observation. After calling this, the observation will no longer trigger its callback.
+    
+    - Note: Observations will automatically invalidate themselves on deallocation.
+    */
     func invalidate()
 }
 
+//# MARK: - Types
+
+/** 
+The callback triggered by an observation of a single object/keypath pair.
+
+- Parameter observed: The object being observed.
+- Parameter keyPath: The key path that changed.
+- Parameter oldValue: The observed object's value for the observed key path before the change occurred.
+- Parameter newValue: The observed object's value for the observed key path after the change occurred.
+
+- Note: This callback will be triggered on the thread that the change took place.
+*/
 public typealias KVOObservationCallback = (observed: NSObject, keyPath: String, oldValue: AnyObject?, newValue: AnyObject?) -> ()
+
+/** 
+The callback triggered by an observation of a group of objects.
+
+- Parameter observed: An array of the objects being observed.
+- Parameter values: An array of the new values
+*/
 public typealias KVOGroupObservationCallback = (observed: [NSObject], values: [AnyObject]) -> ()
 
+//# MARK: - Helpers
+
+/**
+Convenience methods for generating KVO observations.
+*/
 public class KVO {
 
+    /** 
+    Create an observation for the given key path on the given object.
+    
+    - Parameter object: The object to observe.
+    - Parameter keyPath: The key path to observe changes on `object` for.
+    - Parameter triggerInitial: Optional, defaults to `true`. If set to `true`, the callback (if given) will trigger immediately, before the function returns.
+    - Parameter callback: The callback to be triggered when the observation fires.
+    
+    - Returns: Returns a `KVOSingleObservation` object for the observation.
+
+    - Note: The callback will be triggered on the thread that the change took place.
+
+    - Seealso: `KVOSingleObservation`
+    - Seealso: `KVOObservationCallback`
+    */
     public static func observe(object: NSObject, keyPath: String, triggerInitial: Bool = true, callback: KVOObservationCallback? = nil) -> KVOSingleObservation {
         return KVOSingleObservation(object: object, keyPath: keyPath, triggerInitial: triggerInitial, callback: callback)
     }
 
-    public static func combine(observervations: [KVOSingleObservation], callback: KVOGroupObservationCallback) -> KVOGroupObservation {
-        return KVOGroupObservation(observations: observervations, callback: callback)
+    /**
+    Combine the given observations into a single group observation.
+
+    - Parameter observations: An array of `KVOSingleObservation` objects to combine.
+    - Parameter callback: The callback to be triggered when any of the given observations fire.
+
+    - Returns: Returns a `KVOGroupObservation` object for the observation.
+
+    - Note: The callbacks for the given `KVOSingleObservation` objects will be replaced by this operation. Use the 
+        `KVOGroupObservationCallback` object passed into this function instead.
+
+    - Seealso: `KVOSingleObservation`
+    - Seealso: `KVOGroupObservation`
+    - Seealso: `KVOGroupObservationCallback`
+    */
+    public static func combine(observations: [KVOSingleObservation], callback: KVOGroupObservationCallback) -> KVOGroupObservation {
+        return KVOGroupObservation(observations: observations, callback: callback)
     }
 
+    /**
+    Observe a single key path of multiple objects.
+    
+    Handy if you have a list of objects of the same type and want to observe when a property changes on any one of them.
+
+    - Parameter keyPath: The key path to observe.
+    - Parameter objects: The objects to observe `keyPath` on.
+    - Parameter callback: The callback to be triggered when any of the observations fire.
+    
+    - Returns: Returns a `KVOGroupObservation` object for the observation.
+    - Seealso: `KVOGroupObservation`
+    - Seealso: `KVOGroupObservationCallback`
+*/
     public static func observeKeyPath(keyPath: String, ofObjects objects: [NSObject], callback: KVOGroupObservationCallback) -> KVOGroupObservation {
         var observations = [KVOSingleObservation]()
 
@@ -34,26 +105,45 @@ public class KVO {
 
         return KVO.combine(observations, callback: callback)
     }
-
 }
 
+//# MARK: - Classes
+
+/**
+Represents a single observation of an object/keypath pair.
+*/
 public class KVOSingleObservation : NSObject, KVOObservation {
 
+    /** 
+    The callback to be triggered when the value for the key path of the observed object changes.
+    
+    - Note: The callback will be triggered on the thread that the change originally occurred.
+    */
     public var callback: KVOObservationCallback?
+
+    /** The key path being observed. */
     public let keyPath: String
-    private var context = UInt8()
-    internal var didTriggerInitial: Bool
+
+    /** The object being observed. */
     public private(set) weak var observedObject: NSObject?
 
-    convenience init (object: NSObject, keyPath: String) {
-        self.init(object: object, keyPath: keyPath, callback: nil)
-    }
+    // Private properties
+    private var context = UInt8()
+    private var didTriggerInitial: Bool
 
-    convenience init(object: NSObject, keyPath: String, callback: KVOObservationCallback?) {
-        self.init(object: object, keyPath: keyPath, triggerInitial: true, callback: callback)
-    }
+    /**
+    Initialise a new observation.
+    
+    - Parameter object: The object to observe.
+    - Parameter keyPath: The key path to observe changes on `object` for.
+    - Parameter triggerInitial: Optional, defaults to `true`. If set to `true`, the callback (if given) will trigger immediately, before the function returns.
+    - Parameter callback: The callback to be triggered when the observation fires.
+    
+    - Note: The callback will be triggered on the thread that the change originally occurred.
 
-    init(object: NSObject, keyPath: String, triggerInitial: Bool, callback: KVOObservationCallback?) {
+    - Seealso: `KVOObservationCallback`
+    */
+    public init(object: NSObject, keyPath: String, triggerInitial: Bool = true, callback: KVOObservationCallback? = nil) {
         self.callback = callback
         self.keyPath = keyPath
         self.observedObject = object
@@ -68,12 +158,23 @@ public class KVOSingleObservation : NSObject, KVOObservation {
         self.invalidate()
     }
 
+    // Public API
+
+    /** 
+    Invalidate the observation.
+    
+    After calling this function, the observation will no longer trigger its callback.
+    
+    - Note: The observation will automatically invalidate itself when it is deallocated.
+    */
     public func invalidate() {
         if let observedObject = self.observedObject {
             observedObject.removeObserver(self, forKeyPath: self.keyPath, context: &self.context)
             self.observedObject = nil
         }
     }
+
+    // Internal Helpers
 
     public override func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
 
@@ -96,12 +197,34 @@ public class KVOSingleObservation : NSObject, KVOObservation {
     }
 }
 
+
 public class KVOGroupObservation : NSObject, KVOObservation {
 
-    private let observations: [KVOSingleObservation]
-    var callback: KVOGroupObservationCallback?
+    /**
+    The callback to be triggered when any of the grouped observations are triggered.
 
-    init(observations: [KVOSingleObservation], callback: KVOGroupObservationCallback) {
+    - Note: The callback will be triggered on the thread that the change originally occurred.
+    */
+    public var callback: KVOGroupObservationCallback?
+
+    // Private properties
+    private let observations: [KVOSingleObservation]
+
+    /**
+    Initialise a new group observation.
+
+    - Parameter observations: The `KVOSingleObservation` objects to group together.
+    - Parameter callback: The callback to be triggered when the observation fires.
+
+    - Note: The callback will be triggered on the thread that the change originally occurred.
+    
+    - Note: The callbacks for the given `KVOSingleObservation` objects will be replaced by this operation. Use the
+    `KVOGroupObservationCallback` object passed into this object instead.
+
+    - Seealso: `KVOSingleObservation`
+    - Seealso: `KVOGroupObservationCallback`
+    */
+    public init(observations: [KVOSingleObservation], callback: KVOGroupObservationCallback) {
         self.observations = observations
         self.callback = callback
         super.init()
@@ -130,11 +253,22 @@ public class KVOGroupObservation : NSObject, KVOObservation {
         self.invalidate()
     }
 
+    // Public API
+
+    /**
+    Invalidate the observation.
+
+    After calling this function, the observation will no longer trigger its callback.
+
+    - Note: The observation will automatically invalidate itself when it is deallocated.
+    */
     public func invalidate() {
         for observation in self.observations {
             observation.invalidate()
         }
     }
+
+    // Internal Helpers
 
     private func triggerCallback() {
 
@@ -157,6 +291,5 @@ public class KVOGroupObservation : NSObject, KVOObservation {
 
         callback(observed: objects, values: values)
     }
-
 
 }
