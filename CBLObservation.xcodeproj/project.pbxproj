@@ -10,6 +10,7 @@
 		50D7317D1BBAB49900F2C59D /* CBLObservation.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D7317C1BBAB49900F2C59D /* CBLObservation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		50D731841BBAB49900F2C59D /* CBLObservation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 50D731791BBAB49900F2C59D /* CBLObservation.framework */; settings = {ASSET_TAGS = (); }; };
 		50D731891BBAB49900F2C59D /* CBLObservationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D731881BBAB49900F2C59D /* CBLObservationTests.swift */; };
+		50D731941BBAB82300F2C59D /* KVOObservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D731931BBAB82300F2C59D /* KVOObservation.swift */; settings = {ASSET_TAGS = (); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -29,6 +30,7 @@
 		50D731831BBAB49900F2C59D /* CBLObservationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CBLObservationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		50D731881BBAB49900F2C59D /* CBLObservationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CBLObservationTests.swift; sourceTree = "<group>"; };
 		50D7318A1BBAB49900F2C59D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		50D731931BBAB82300F2C59D /* KVOObservation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KVOObservation.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				50D7317C1BBAB49900F2C59D /* CBLObservation.h */,
+				50D731931BBAB82300F2C59D /* KVOObservation.swift */,
 				50D7317E1BBAB49900F2C59D /* Info.plist */,
 			);
 			path = CBLObservation;
@@ -142,6 +145,7 @@
 		50D731701BBAB49900F2C59D /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 0700;
 				LastUpgradeCheck = 0700;
 				ORGANIZATIONNAME = "Cascable AB";
 				TargetAttributes = {
@@ -193,6 +197,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50D731941BBAB82300F2C59D /* KVOObservation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -307,6 +312,7 @@
 		50D7318E1BBAB49900F2C59D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -317,12 +323,14 @@
 				PRODUCT_BUNDLE_IDENTIFIER = se.cascable.CBLObservation;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
 		50D7318F1BBAB49900F2C59D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -375,6 +383,7 @@
 				50D7318F1BBAB49900F2C59D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		50D731901BBAB49900F2C59D /* Build configuration list for PBXNativeTarget "CBLObservationTests" */ = {
 			isa = XCConfigurationList;
@@ -383,6 +392,7 @@
 				50D731921BBAB49900F2C59D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
