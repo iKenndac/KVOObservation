@@ -20,17 +20,7 @@ class TestObject : NSObject {
 }
 
 class CBLObservationTests: XCTestCase {
-    
-    override func setUp() {
-        super.setUp()
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-    
-    override func tearDown() {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-        super.tearDown()
-    }
-    
+
     func testInitial() {
 
         let initial = self.expectationWithDescription("Got initial")
@@ -44,7 +34,6 @@ class CBLObservationTests: XCTestCase {
             XCTAssertEqual(new as? String, "Daniel")
             XCTAssertEqual(keyPath, "name")
 
-            print("Got callback!")
             initial.fulfill()
         }
 
@@ -70,7 +59,6 @@ class CBLObservationTests: XCTestCase {
             XCTAssertEqual(new as? String, "Dan")
             XCTAssertEqual(keyPath, "name")
 
-            print("Got callback!")
             nameExpectation.fulfill()
         }
 
@@ -82,7 +70,6 @@ class CBLObservationTests: XCTestCase {
             XCTAssertEqual(new as? String, "123 Coolest St.")
             XCTAssertEqual(keyPath, "address")
 
-            print("Got callback!")
             addressExpectation.fulfill()
         }
 
@@ -96,7 +83,76 @@ class CBLObservationTests: XCTestCase {
         nameObservation.invalidate()
         addressObservation.invalidate()
     }
-    
 
-    
+    func testGroupWithInitial() {
+
+        let obj1 = TestObject(name: "Daniel", address: "123 Cool St.")
+        let obj2 = TestObject(name: "Alana", address: "67a Warm St.")
+        let obj3 = TestObject(name: "Chester", address: "12102 Ice Blvd.")
+
+        var callbacksReceived = 0
+        let gotFourCallbacksExpectation = self.expectationWithDescription("Got four callbacks")
+
+        let groupObservation = KVO.combine([KVO.observe(obj1, keyPath: "name"), KVO.observe(obj2, keyPath: "name"), KVO.observe(obj3, keyPath: "name")]) {
+            objects, values in
+
+                XCTAssertEqual([obj1, obj2, obj3], objects)
+                XCTAssertEqual([obj1.name!, obj2.name!, obj3.name!], values as! [String])
+
+                callbacksReceived++
+                
+                if (callbacksReceived == 4) {
+                    // Since the single observations will trigger on creation, the group one
+                    // will as well, so we expect four triggers - one initial, three change.
+                    gotFourCallbacksExpectation.fulfill()
+                }
+
+        }
+
+        obj1.name = "Dan"
+        obj2.name = "Elena"
+        obj3.name = "Dumbass"
+
+        self.waitForExpectationsWithTimeout(1.0) {
+            error in
+        }
+
+        groupObservation.invalidate()
+    }
+
+    func testGroupConvenienceWithInitial() {
+
+        let obj1 = TestObject(name: "Daniel", address: "123 Cool St.")
+        let obj2 = TestObject(name: "Alana", address: "67a Warm St.")
+        let obj3 = TestObject(name: "Chester", address: "12102 Ice Blvd.")
+
+        var callbacksReceived = 0
+        let gotFourCallbacksExpectation = self.expectationWithDescription("Got four callbacks")
+
+        let groupObservation = KVO.observeKeyPath("name", ofObjects:[obj1, obj2, obj3]) {
+            objects, values in
+
+            XCTAssertEqual([obj1, obj2, obj3], objects)
+            XCTAssertEqual([obj1.name!, obj2.name!, obj3.name!], values as! [String])
+
+            callbacksReceived++
+
+            if (callbacksReceived == 4) {
+                // Since the single observations will trigger on creation, the group one
+                // will as well, so we expect four triggers - one initial, three change.
+                gotFourCallbacksExpectation.fulfill()
+            }
+
+        }
+
+        obj1.name = "Dan"
+        obj2.name = "Elena"
+        obj3.name = "Dumbass"
+
+        self.waitForExpectationsWithTimeout(1.0) {
+            error in
+        }
+
+        groupObservation.invalidate()
+    }
 }

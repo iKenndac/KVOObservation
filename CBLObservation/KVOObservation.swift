@@ -9,16 +9,30 @@
 import Foundation
 
 public protocol KVOObservation {
-    var callback: KVOObservationCallback? { get set }
     func invalidate()
 }
 
-public typealias KVOObservationCallback = (NSObject, String, AnyObject?, AnyObject?) -> ()
+public typealias KVOObservationCallback = (observed: NSObject, keyPath: String, oldValue: AnyObject?, newValue: AnyObject?) -> ()
+public typealias KVOGroupObservationCallback = (observed: [NSObject], values: [AnyObject]) -> ()
 
 public class KVO {
 
-    public static func observe(object: NSObject, keyPath: String, triggerInitial: Bool = true, callback: KVOObservationCallback? = nil) -> KVOObservation {
+    public static func observe(object: NSObject, keyPath: String, triggerInitial: Bool = true, callback: KVOObservationCallback? = nil) -> KVOSingleObservation {
         return KVOSingleObservation(object: object, keyPath: keyPath, triggerInitial: triggerInitial, callback: callback)
+    }
+
+    public static func combine(observervations: [KVOSingleObservation], callback: KVOGroupObservationCallback) -> KVOGroupObservation {
+        return KVOGroupObservation(observations: observervations, callback: callback)
+    }
+
+    public static func observeKeyPath(keyPath: String, ofObjects objects: [NSObject], callback: KVOGroupObservationCallback) -> KVOGroupObservation {
+        var observations = [KVOSingleObservation]()
+
+        for object in objects {
+            observations.append(KVO.observe(object, keyPath: keyPath))
+        }
+
+        return KVO.combine(observations, callback: callback)
     }
 
 }
@@ -26,9 +40,10 @@ public class KVO {
 public class KVOSingleObservation : NSObject, KVOObservation {
 
     public var callback: KVOObservationCallback?
-    let keyPath: String
+    public let keyPath: String
     private var context = UInt8()
-    weak var observedObject: NSObject?
+    internal var didTriggerInitial: Bool
+    public private(set) weak var observedObject: NSObject?
 
     convenience init (object: NSObject, keyPath: String) {
         self.init(object: object, keyPath: keyPath, callback: nil)
@@ -42,6 +57,7 @@ public class KVOSingleObservation : NSObject, KVOObservation {
         self.callback = callback
         self.keyPath = keyPath
         self.observedObject = object
+        self.didTriggerInitial = triggerInitial
         super.init()
 
         let options = triggerInitial ? NSKeyValueObservingOptions([.Initial, .New, .Old]) : NSKeyValueObservingOptions([.New, .Old])
@@ -73,9 +89,74 @@ public class KVOSingleObservation : NSObject, KVOObservation {
         if (keyPath == self.keyPath && context == &self.context) {
             let old = change![NSKeyValueChangeOldKey]
             let new = change![NSKeyValueChangeNewKey]
-            callback(observedObject, self.keyPath, old, new)
+            callback(observed: observedObject, keyPath: self.keyPath, oldValue: old, newValue: new)
         } else {
             super.observeValueForKeyPath(keyPath, ofObject: object, change: change, context: context)
         }
     }
+}
+
+public class KVOGroupObservation : NSObject, KVOObservation {
+
+    private let observations: [KVOSingleObservation]
+    var callback: KVOGroupObservationCallback?
+
+    init(observations: [KVOSingleObservation], callback: KVOGroupObservationCallback) {
+        self.observations = observations
+        self.callback = callback
+        super.init()
+
+        var triggerInitial = false
+        // We'll infer whether to trigger initial from whether any of our observations were set to trigger initially.
+
+        for observation in self.observations {
+
+            if (observation.didTriggerInitial) {
+                triggerInitial = true
+            }
+
+            observation.callback = {
+                observed, keyPath, old, new in
+                self.triggerCallback()
+            }
+        }
+
+        if (triggerInitial) {
+            self.triggerCallback()
+        }
+    }
+
+    deinit {
+        self.invalidate()
+    }
+
+    public func invalidate() {
+        for observation in self.observations {
+            observation.invalidate()
+        }
+    }
+
+    private func triggerCallback() {
+
+        guard let callback = self.callback else {
+            return
+        }
+
+        var objects = [NSObject]()
+        var values = [AnyObject]()
+
+        for observation in self.observations {
+            objects.append(observation.observedObject!)
+            let value = observation.observedObject!.valueForKeyPath(observation.keyPath)
+            if let value = value {
+                values.append(value)
+            } else {
+                values.append(NSNull())
+            }
+        }
+
+        callback(observed: objects, values: values)
+    }
+
+
 }
