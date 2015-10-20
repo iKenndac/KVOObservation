@@ -4,9 +4,21 @@ Basically, if you're looking to replace using ReactiveCocoa's `combineLatest:` t
 
 You can use `KVOObservation` from either Swift of Objective-C.
 
-**Important:** Since Key-Value Observing is an Objective-C runtime feature, your Swift objects need to descend from NSObject to work.
+**Important:** Since Key-Value Observing is an Objective-C runtime feature, your Swift objects need to descend from NSObject to work. In addition, properties you wish to observe must be marked with the `dynamic` keyword.
 
-### Usage
+```swift
+class TestObject : NSObject {
+    dynamic var name: String?
+    dynamic var address: String?
+
+    init(name: String, address: String) {
+        self.name = name
+        self.address = address
+    }
+}
+```
+
+### Basic Usage
 
 To observe a single object/keypath pair:
 
@@ -67,6 +79,44 @@ obj1.name = "Dan"
 ```
 
 You can find some usage examples in the unit tests included with the project.
+
+### Advanced Usage
+
+By default, observations will fire immediately on creation. If you don't want this to happen, create your observations with the optional `triggerInitial` parameter set to `false`.
+
+```swift
+var testObject = TestObject(name: "Daniel", address: "123 Cool St.")
+
+let nameObservation = KVO.observe(testObject, keyPath: "name", triggerInitial: false) {
+    observed, keyPath, old, new in
+	// Do some stuff
+}
+```
+
+Grouped observations infer whether to fire immediately from the observations they're created from. If any of the grouped observations are set to fire immediately, the group will also fire immediately.
+
+```swift
+var testObject = TestObject(name: "Daniel", address: "123 Cool St.")
+
+let nameObservation = KVO.observe(testObject, keyPath: "name", triggerInitial: false)
+let addressObservation = KVO.observe(testObject, keyPath: "address", triggerInitial: false)
+
+let groupObservation = KVO.combine([nameObservation, addressObservation]) {
+    objects, values in
+    // This will NOT fire immediately since none of the observations the
+    // group was created from were set to fire immediately.
+}
+
+let immediateNameObservation = KVO.observe(testObject, keyPath: "name", triggerInitial: true)
+
+let immediateGroupObservation = KVO.combine([immediateNameObservation, addressObservation]) {
+    objects, values in
+    // This WILL fire immediately since one of the observations the
+    // group was created from was set to fire immediately.
+}
+```
+
+As shown in the sample code above, you can create observations without callbacks. Normally, the only reason to do this is when setting up observations that will go into a group - otherwise, observations are pretty useless without a way of reacting to them!
 
 ### License 
 
